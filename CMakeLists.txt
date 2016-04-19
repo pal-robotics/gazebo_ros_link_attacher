@@ -6,7 +6,6 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp 
   gazebo_ros
   std_msgs
-  message_runtime
   message_generation
 )
 

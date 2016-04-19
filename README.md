@@ -1,16 +1,31 @@
 Attach two Gazebo models with a virtual joint in a generalized grasp hack
 
+# Build
+
+````
+mkdir -p gazebo_link_attacher_ws/src
+cd gazebo_link_attacher_ws/src
+catkin_init_workspace
+git clone https://github.com/pal-robotics/gazebo_ros_link_attacher.git
+cd ..
+catkin_make
+source devel/setup.bash
+````
+
+
 # Launch
 
     roslaunch gazebo_ros_link_attacher test_attacher.launch
 
-Empty world with the plugin `libgazebo_ros_link_attacher.so` loaded.
+Empty world with the plugin `libgazebo_ros_link_attacher.so` loaded (in the *worlds* folder).
 
 Which provides the `/link_attacher_node/attach_models` topic to specify two models and their links to be attached.
 
 ![gazebo screenshot](ss.png)
 
 # Run demo
+
+In another shell, be sure to do `source devel/setup.bash` of your workspace.
 
     rosrun gazebo_ros_link_attacher demo.py
 
