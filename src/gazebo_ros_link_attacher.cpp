@@ -76,17 +76,23 @@ namespace gazebo
     this->model = m1; // Store the model we created the joint, just in case
     this->fixedJoint = this->physics->CreateJoint("revolute", m1);
 
-    ROS_INFO_STREAM("Loading links");
     this->link1 = l1; // Store the links too
     this->link2 = l2;
+    ROS_INFO_STREAM("Loading links");
     this->fixedJoint->Load(l1,
                            l2, math::Pose());
-    ROS_INFO_STREAM("Init");
-    this->fixedJoint->Init();
+    ROS_INFO_STREAM("Attach");
+    this->fixedJoint->Attach(l1, l2);
+    ROS_INFO_STREAM("SetModel");
+    this->fixedJoint->SetModel(m1);
     ROS_INFO_STREAM("SetHightstop");
     this->fixedJoint->SetHighStop(0, 0);
     ROS_INFO_STREAM("SetLowStop");
     this->fixedJoint->SetLowStop(0, 0);
+    ROS_INFO_STREAM("Giving a name");
+    this->fixedJoint->SetName("fixedjoint");
+    ROS_INFO_STREAM("Init");
+    this->fixedJoint->Init();
     ROS_INFO_STREAM("We are done");
     this->attached = true;
 

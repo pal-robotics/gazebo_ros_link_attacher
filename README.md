@@ -51,6 +51,7 @@ Aborted (core dumped)
 
 Which I've only seen this other useful information: [Bitbucket gazebo removing moving model with ode friction fails](https://bitbucket.org/osrf/gazebo/issues/1177/removing-moving-model-with-ode-friction). But it didn't help me solve my crash. I guess when attaching one model to the other it removes the second one to re-create it attached to the first or something like that.
 
+And also this other issue: [Visualizing dynamically created joints](https://bitbucket.org/osrf/gazebo/issues/1077/visualizing-dynamically-created-joints) made me add a couple of lines more.
 
 The method to attach the links is based on the grasp hack of the Gripper in gazebo/physics:
 [Gripper.hh](https://bitbucket.org/osrf/gazebo/src/1d1e3a542af81670f43a120e1df7190592bc4c0f/gazebo/physics/Gripper.hh?at=default&fileviewer=file-view-default)
