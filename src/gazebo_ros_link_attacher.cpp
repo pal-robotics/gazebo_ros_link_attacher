@@ -63,12 +63,22 @@ namespace gazebo
       ROS_ERROR_STREAM(link1 << " link was not found");
       return false;
     }
+    if (l1->GetInertial() == NULL){
+        ROS_ERROR_STREAM("link1 inertia is NULL!");
+    }
+    else
+        ROS_INFO_STREAM("link1 inertia is not NULL, for example, mass is: " << l1->GetInertial()->GetMass());
     ROS_INFO_STREAM("Getting link: '" << link2 << "' from model: '" << model2 << "'");
     physics::LinkPtr l2 = m2->GetLink(link2);
     if (l2 == NULL){
       ROS_ERROR_STREAM(link2 << " link was not found");
       return false;
     }
+    if (l2->GetInertial() == NULL){
+        ROS_ERROR_STREAM("link2 inertia is NULL!");
+    }
+    else
+        ROS_INFO_STREAM("link2 inertia is not NULL, for example, mass is: " << l2->GetInertial()->GetMass());
 
     ROS_INFO_STREAM("Links are: "  << l1->GetName() << " and " << l2->GetName());
 
@@ -84,7 +94,21 @@ namespace gazebo
     this->fixedJoint->Load(l1,
                            l2, math::Pose());
     ROS_INFO_STREAM("SetModel");
-    this->fixedJoint->SetModel(m1);
+    this->fixedJoint->SetModel(m2);
+    /*
+     * If SetModel is not done we get:
+     * ***** Internal Program Error - assertion (this->GetParentModel() != __null)
+     failed in void gazebo::physics::Entity::PublishPose():
+     /tmp/buildd/gazebo2-2.2.3/gazebo/physics/Entity.cc(225):
+     An entity without a parent model should not happen
+
+     * If SetModel is given the same model than CreateJoint given
+     * Gazebo crashes with
+     * ***** Internal Program Error - assertion (self->inertial != __null)
+     failed in static void gazebo::physics::ODELink::MoveCallback(dBodyID):
+     /tmp/buildd/gazebo2-2.2.3/gazebo/physics/ode/ODELink.cc(183): Inertial pointer is NULL
+     */
+
     ROS_INFO_STREAM("SetAxis");
     this->fixedJoint->SetAxis(0, math::Vector3(0, 0, 1));
     ROS_INFO_STREAM("SetHightstop");
