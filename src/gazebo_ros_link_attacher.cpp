@@ -32,7 +32,9 @@ namespace gazebo
     
     this->world = _world;
     this->physics = this->world->GetPhysicsEngine();
+    this->fixed_joint_counter = 0;
     this->attach_by_name_subscriber_ = this->nh_.subscribe("attach_models", 1, &GazeboRosLinkAttacher::attach_callback, this);
+    this->detach_subscriber_ = this->nh_.subscribe("detach", 1, &GazeboRosLinkAttacher::detach_callback, this);
     ROS_INFO("Link attacher node initialized");
   }
 
@@ -84,17 +86,17 @@ namespace gazebo
 
     ROS_INFO_STREAM("Creating revolute joint on model: '" << model1 << "'");
     this->model = m1; // Store the model we created the joint, just in case
-    this->fixedJoint = this->physics->CreateJoint("revolute", m1);
+    this->fixedJoint[this->fixed_joint_counter] = this->physics->CreateJoint("revolute", m1);
 
     this->link1 = l1; // Store the links too
     this->link2 = l2;
     ROS_INFO_STREAM("Attach");
-    this->fixedJoint->Attach(l1, l2);
+    this->fixedJoint[this->fixed_joint_counter]->Attach(l1, l2);
     ROS_INFO_STREAM("Loading links");
-    this->fixedJoint->Load(l1,
+    this->fixedJoint[this->fixed_joint_counter]->Load(l1,
                            l2, math::Pose());
     ROS_INFO_STREAM("SetModel");
-    this->fixedJoint->SetModel(m2);
+    this->fixedJoint[this->fixed_joint_counter]->SetModel(m2);
     /*
      * If SetModel is not done we get:
      * ***** Internal Program Error - assertion (this->GetParentModel() != __null)
@@ -109,26 +111,28 @@ namespace gazebo
      /tmp/buildd/gazebo2-2.2.3/gazebo/physics/ode/ODELink.cc(183): Inertial pointer is NULL
      */
 
-    ROS_INFO_STREAM("SetAxis");
-    this->fixedJoint->SetAxis(0, math::Vector3(0, 0, 1));
+//    ROS_INFO_STREAM("SetAxis");
+//    this->fixedJoint[this->fixed_joint_counter]->SetAxis(0, math::Vector3(0, 0, 1));
     ROS_INFO_STREAM("SetHightstop");
-    this->fixedJoint->SetHighStop(0, 0);
+    this->fixedJoint[this->fixed_joint_counter]->SetHighStop(0, 0);
     ROS_INFO_STREAM("SetLowStop");
-    this->fixedJoint->SetLowStop(0, 0);
-    ROS_INFO_STREAM("Giving a name");
-    this->fixedJoint->SetName("fixedjoint");
+    this->fixedJoint[this->fixed_joint_counter]->SetLowStop(0, 0);
+//    ROS_INFO_STREAM("Giving a name");
+//    this->fixedJoint[this->fixed_joint_counter]->SetName("fixedjoint");
     ROS_INFO_STREAM("Init");
-    this->fixedJoint->Init();
+    this->fixedJoint[this->fixed_joint_counter]->Init();
     ROS_INFO_STREAM("We are done");
     this->attached = true;
+    this->fixed_joint_counter++;
 
     return true;
   }
 
   bool GazeboRosLinkAttacher::detach()
   {
-    this->fixedJoint->Detach();
-    this->fixedJoint->Fini();
+    this->fixedJoint[this->fixed_joint_counter-1]->Detach();
+    this->fixedJoint[this->fixed_joint_counter-1]->Fini();
+    this->fixedJoint[this->fixed_joint_counter-1]->Reset();
     this->attached = false;
     return true;
   }

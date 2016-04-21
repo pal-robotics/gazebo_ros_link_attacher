@@ -56,7 +56,8 @@ namespace gazebo
         void detach_callback(const std_msgs::String msg);
 
         bool attached;
-        physics::JointPtr fixedJoint;
+        physics::JointPtr fixedJoint[50];
+        int fixed_joint_counter;
 
         physics::LinkPtr link1;
         physics::LinkPtr link2;
