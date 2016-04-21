@@ -40,8 +40,9 @@ link_name_2: 'link'"
 ````
 
 # Current status
+It works!
 
-Currently it crashes with:
+~~Currently it crashes with:
 
 ````
 ***** Internal Program Error - assertion (self->inertial != __null) failed in static void gazebo::physics::ODELink::MoveCallback(dBodyID):
@@ -57,4 +58,4 @@ The method to attach the links is based on the grasp hack of the Gripper in gaze
 [Gripper.hh](https://bitbucket.org/osrf/gazebo/src/1d1e3a542af81670f43a120e1df7190592bc4c0f/gazebo/physics/Gripper.hh?at=default&fileviewer=file-view-default)
 [Gripper.cc](https://bitbucket.org/osrf/gazebo/src/1d1e3a542af81670f43a120e1df7190592bc4c0f/gazebo/physics/Gripper.cc?at=default&fileviewer=file-view-default)
 
-Which is to create a revolute joint on the first model (with range of motion 0) linking a link on the first model and a link on the second model.
+Which is to create a revolute joint on the first model (with range of motion 0) linking a link on the first model and a link on the second model.~~
