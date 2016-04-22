@@ -46,6 +46,9 @@ namespace gazebo
   {
 
     // look for any previous instance of the joint first.
+    // if we try to create a joint in between two links
+    // more than once (even deleting any reference to the first one)
+    // gazebo hangs/crashes
     fixedJoint j;
     if(this->getJoint(model1, link1, model2, link2, j)){
         ROS_INFO_STREAM("Joint already existed, reusing it.");
@@ -147,8 +150,6 @@ namespace gazebo
       fixedJoint j;
       if(this->getJoint(model1, link1, model2, link2, j)){
           j.joint->Detach();
-          //j.joint->Fini();
-          //j.joint->Reset();
           return true;
       }
 
