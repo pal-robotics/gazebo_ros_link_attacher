@@ -19,7 +19,9 @@ source devel/setup.bash
 
 Empty world with the plugin `libgazebo_ros_link_attacher.so` loaded (in the *worlds* folder).
 
-Which provides the `/link_attacher_node/attach_models` topic to specify two models and their links to be attached.
+Which provides the `/link_attacher_node/attach` service to specify two models and their links to be attached.
+
+And `/link_attacher_node/detach` service to specify two models and their links to be detached.
 
 ![gazebo screenshot](ss.png)
 
@@ -27,17 +29,34 @@ Which provides the `/link_attacher_node/attach_models` topic to specify two mode
 
 In another shell, be sure to do `source devel/setup.bash` of your workspace.
 
-    rosrun gazebo_ros_link_attacher demo.py
+    rosrun gazebo_ros_link_attacher spawn.py
 
-This demo will spawn two boxes and link them.
+Three cubes will be spawned.
 
-You can also spawn two items with the GUI and run a rostopic pub:
+    rosrun gazebo_ros_link_attacher attach.py
+
+The cubes will be attached all between themselves as (1,2), (2,3), (3,1). You can move them with the GUI and you'll see they will move together.
+
+    rosrun gazebo_ros_link_attacher detach.py
+
+The cubes will be detached and you can move them separately again.
+
+You can also spawn items with the GUI and run a rosservice call:
 ````
-rostopic pub /link_attacher_node/attach_models gazebo_ros_link_attacher/Attach "model_name_1: 'unit_box_1'
+rosservice call /link_attacher_node/attach "model_name_1: 'unit_box_1'
 link_name_1: 'link'
 model_name_2: 'unit_sphere_1'
 link_name_2: 'link'"
 ````
+
+And same thing to detach:
+````
+rosservice call /link_attacher_node/detach "model_name_1: 'unit_box_1'
+link_name_1: 'link'
+model_name_2: 'unit_sphere_1'
+link_name_2: 'link'"
+````
+
 
 # Current status
 It works!
