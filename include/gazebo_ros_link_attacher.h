@@ -39,31 +39,38 @@ namespace gazebo
         /// \brief Load the controller
         void Load( physics::WorldPtr _world, sdf::ElementPtr /*_sdf*/ );
 
-        /// \brief Attach with a revolute joint link1 to link2
+        /// \brief Attach with a revolute joint
         bool attach(std::string model1, std::string link1,
                     std::string model2, std::string link2);
 
-        /// \brief Detach link1 from link2
-        bool detach();
+        /// \brief Detach
+        bool detach(std::string model1, std::string link1,
+                    std::string model2, std::string link2);
 
-      
-      private:
+        /// \brief Internal representation of a fixed joint
+        struct fixedJoint{
+            std::string model1;
+            physics::ModelPtr m1;
+            std::string link1;
+            physics::LinkPtr l1;
+            std::string model2;
+            physics::ModelPtr m2;
+            std::string link2;
+            physics::LinkPtr l2;
+            physics::JointPtr joint;
+        };
+
+        bool getJoint(std::string model1, std::string link1, std::string model2, std::string link2, fixedJoint &joint);
+
+   private:
         ros::NodeHandle nh_;
         ros::Subscriber attach_by_name_subscriber_;
         ros::Subscriber detach_subscriber_;
 
         void attach_callback(const gazebo_ros_link_attacher::Attach msg);
-        void detach_callback(const std_msgs::String msg);
+        void detach_callback(const gazebo_ros_link_attacher::Attach msg);
 
-        bool attached;
-        physics::JointPtr fixedJoint[50];
-        int fixed_joint_counter;
-
-        physics::LinkPtr link1;
-        physics::LinkPtr link2;
-
-        /// \brief Model that contains this
-        physics::ModelPtr model;
+        std::vector<fixedJoint> joints;
 
         /// \brief The physics engine.
         physics::PhysicsEnginePtr physics;
