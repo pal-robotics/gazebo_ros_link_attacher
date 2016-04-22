@@ -19,10 +19,9 @@
 #include <gazebo/common/Events.hh>
 #include "gazebo/msgs/msgs.hh"
 #include "gazebo/transport/transport.hh"
-
-#include <std_msgs/String.h>
 #include "gazebo_ros_link_attacher/Attach.h"
-#include <geometry_msgs/Point.h>
+#include "gazebo_ros_link_attacher/AttachRequest.h"
+#include "gazebo_ros_link_attacher/AttachResponse.h"
 
 namespace gazebo
 {
@@ -64,11 +63,13 @@ namespace gazebo
 
    private:
         ros::NodeHandle nh_;
-        ros::Subscriber attach_by_name_subscriber_;
-        ros::Subscriber detach_subscriber_;
+        ros::ServiceServer attach_service_;
+        ros::ServiceServer detach_service_;
 
-        void attach_callback(const gazebo_ros_link_attacher::Attach msg);
-        void detach_callback(const gazebo_ros_link_attacher::Attach msg);
+        bool attach_callback(gazebo_ros_link_attacher::Attach::Request &req,
+                              gazebo_ros_link_attacher::Attach::Response &res);
+        bool detach_callback(gazebo_ros_link_attacher::Attach::Request &req,
+                             gazebo_ros_link_attacher::Attach::Response &res);
 
         std::vector<fixedJoint> joints;
 
