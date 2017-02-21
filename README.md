@@ -29,7 +29,7 @@ And `/link_attacher_node/detach` service to specify two models and their links t
 
 In another shell, be sure to do `source devel/setup.bash` of your workspace.
 
-    rosrun gazebo_ros_link_attacher spawn.py
+    rosrun gazebo_ros_link_attacher spawn_models.py
 
 Three cubes will be spawned.
 
