@@ -15,6 +15,9 @@ namespace gazebo
   GazeboRosLinkAttacher::GazeboRosLinkAttacher() :
     nh_("link_attacher_node")
   {
+    std::vector<fixedJoint> vect;
+    this->detach_vector = vect;
+    this->beforePhysicsUpdateConnection = event::Events::ConnectBeforePhysicsUpdate(std::bind(&GazeboRosLinkAttacher::OnUpdate, this));
   }
 
 
@@ -151,7 +154,8 @@ namespace gazebo
       // search for the instance of joint and do detach
       fixedJoint j;
       if(this->getJoint(model1, link1, model2, link2, j)){
-          j.joint->Detach();
+          this->detach_vector.push_back(j);
+          ROS_INFO_STREAM("Detach joint request pushed in the detach vector");
           return true;
       }
 
@@ -208,6 +212,26 @@ namespace gazebo
         res.ok = true;
       }
       return true;
+  }
+
+  // thanks to https://answers.gazebosim.org/question/12118/intermittent-segmentation-fault-possibly-by-custom-worldplugin-attaching-and-detaching-child/?answer=24271#post-id-24271
+  void GazeboRosLinkAttacher::OnUpdate()
+  {
+    if(!this->detach_vector.empty())
+    {
+      ROS_INFO_STREAM("Received before physics update callback... Detaching joints");
+      std::vector<fixedJoint>::iterator it;
+      it = this->detach_vector.begin();
+      fixedJoint j;
+      while (it != this->detach_vector.end())
+      {
+        j = *it;
+        j.joint->Detach();
+        ROS_INFO_STREAM("Joint detached !");
+        ++it;
+      }
+      detach_vector.clear();
+    }
   }
 
 }
