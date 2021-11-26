@@ -8,14 +8,20 @@ cd gazebo_link_attacher_ws/src
 catkin_init_workspace
 git clone https://github.com/pal-robotics/gazebo_ros_link_attacher.git
 cd ..
-catkin_make
-source devel/setup.bash
+
+rosdep update
+rosdep install --from-paths src --ignore-src -y --rosdistro foxy
+
+colcon build
+source install/setup.bash
+
+
 ````
 
 
 # Launch
 
-    roslaunch gazebo_ros_link_attacher test_attacher.launch
+    ros2 launch gazebo_ros_link_attacher test_attacher.py
 
 Empty world with the plugin `libgazebo_ros_link_attacher.so` loaded (in the *worlds* folder).
 
@@ -27,34 +33,34 @@ And `/link_attacher_node/detach` service to specify two models and their links t
 
 # Run demo
 
-In another shell, be sure to do `source devel/setup.bash` of your workspace.
+In another shell, be sure to do `source install/setup.bash` of your workspace.
 
-    rosrun gazebo_ros_link_attacher spawn.py
+    ros2 run gazebo_ros_link_attacher spawn_models.py
 
 Three cubes will be spawned.
 
-    rosrun gazebo_ros_link_attacher attach.py
+    ros2 run gazebo_ros_link_attacher attach.py
 
 The cubes will be attached all between themselves as (1,2), (2,3), (3,1). You can move them with the GUI and you'll see they will move together.
 
-    rosrun gazebo_ros_link_attacher detach.py
+    ros2 run gazebo_ros_link_attacher detach.py
 
 The cubes will be detached and you can move them separately again.
 
 You can also spawn items with the GUI and run a rosservice call:
 ````
-rosservice call /link_attacher_node/attach "model_name_1: 'unit_box_1'
-link_name_1: 'link'
-model_name_2: 'unit_sphere_1'
-link_name_2: 'link'"
+ros2 service call /attach 'gazebo_ros_link_attacher/srv/Attach' '{model_name_1: 'cube1',
+link_name_1: 'link',
+model_name_2: 'cube2',
+link_name_2: 'link'}'
 ````
 
 And same thing to detach:
 ````
-rosservice call /link_attacher_node/detach "model_name_1: 'unit_box_1'
-link_name_1: 'link'
-model_name_2: 'unit_sphere_1'
-link_name_2: 'link'"
+ros2 service call /detach 'gazebo_ros_link_attacher/srv/Attach' '{model_name_1: 'cube1',
+link_name_1: 'link',
+model_name_2: 'cube2',
+link_name_2: 'link'}'
 ````
 
 

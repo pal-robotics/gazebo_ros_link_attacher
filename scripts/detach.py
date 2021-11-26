@@ -1,48 +1,55 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
-import rospy
-from gazebo_ros_link_attacher.srv import Attach, AttachRequest, AttachResponse
+import sys
+import rclpy
+from gazebo_ros_link_attacher.srv import Attach
 
 
 if __name__ == '__main__':
-    rospy.init_node('demo_detach_links')
-    rospy.loginfo("Creating ServiceProxy to /link_attacher_node/detach")
-    attach_srv = rospy.ServiceProxy('/link_attacher_node/detach',
-                                    Attach)
-    attach_srv.wait_for_service()
-    rospy.loginfo("Created ServiceProxy to /link_attacher_node/detach")
+    rclpy.init(args=sys.argv)
+    node = rclpy.create_node('demo_detach_links')
+    node.get_logger().info("Creating service to /detach")
 
-    # Link them
-    rospy.loginfo("Detaching cube1 and cube2")
-    req = AttachRequest()
+
+    attach_srv = node.create_client(Attach, '/detach')
+    while not attach_srv.wait_for_service(timeout_sec=1.0):
+      node.get_logger().info("Waiting for detach service...")
+
+    # Unlink them
+    node.get_logger().info("Detaching cube1 and cube2")
+    req = Attach.Request()
     req.model_name_1 = "cube1"
     req.link_name_1 = "link"
     req.model_name_2 = "cube2"
     req.link_name_2 = "link"
 
-    attach_srv.call(req)
+    resp = attach_srv.call_async(req)
+    rclpy.spin_until_future_complete(node, resp)
+
     # From the shell:
     """
-rosservice call /link_attacher_node/detach "model_name_1: 'cube1'
-link_name_1: 'link'
-model_name_2: 'cube2'
-link_name_2: 'link'"
+ros2 service call /detach 'gazebo_ros_link_attacher/srv/Attach' '{model_name_1: 'cube1',
+link_name_1: 'link',
+model_name_2: 'cube2',
+link_name_2: 'link'}'
     """
 
-    rospy.loginfo("Attaching cube2 and cube3")
-    req = AttachRequest()
+    node.get_logger().info("Detaching cube2 and cube3")
+    req = Attach.Request()
     req.model_name_1 = "cube2"
     req.link_name_1 = "link"
     req.model_name_2 = "cube3"
     req.link_name_2 = "link"
 
-    attach_srv.call(req)
+    resp = attach_srv.call_async(req)
+    rclpy.spin_until_future_complete(node, resp)
 
-    rospy.loginfo("Attaching cube3 and cube1")
-    req = AttachRequest()
+    node.get_logger().info("Detaching cube3 and cube1")
+    req = Attach.Request()
     req.model_name_1 = "cube3"
     req.link_name_1 = "link"
     req.model_name_2 = "cube1"
     req.link_name_2 = "link"
 
-    attach_srv.call(req)
+    resp = attach_srv.call_async(req)
+    rclpy.spin_until_future_complete(node, resp)

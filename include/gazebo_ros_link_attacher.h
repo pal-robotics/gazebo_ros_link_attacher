@@ -7,10 +7,11 @@
 #ifndef GAZEBO_ROS_LINK_ATTACHER_HH
 #define GAZEBO_ROS_LINK_ATTACHER_HH
 
-#include <ros/ros.h>
+#include <rclcpp/rclcpp.hpp>
 
 #include <sdf/sdf.hh>
 #include "gazebo/gazebo.hh"
+#include <gazebo_ros/node.hpp>
 #include <gazebo/physics/physics.hh>
 #include "gazebo/physics/PhysicsTypes.hh"
 #include <gazebo/transport/TransportTypes.hh>
@@ -19,9 +20,7 @@
 #include <gazebo/common/Events.hh>
 #include "gazebo/msgs/msgs.hh"
 #include "gazebo/transport/transport.hh"
-#include "gazebo_ros_link_attacher/Attach.h"
-#include "gazebo_ros_link_attacher/AttachRequest.h"
-#include "gazebo_ros_link_attacher/AttachResponse.h"
+#include "gazebo_ros_link_attacher/srv/attach.hpp"
 
 namespace gazebo
 {
@@ -36,7 +35,7 @@ namespace gazebo
         virtual ~GazeboRosLinkAttacher();
 
         /// \brief Load the controller
-        void Load( physics::WorldPtr _world, sdf::ElementPtr /*_sdf*/ );
+        void Load( physics::WorldPtr _world, sdf::ElementPtr _sdf);
 
         /// \brief Attach with a revolute joint
         bool attach(std::string model1, std::string link1,
@@ -62,14 +61,14 @@ namespace gazebo
         bool getJoint(std::string model1, std::string link1, std::string model2, std::string link2, fixedJoint &joint);
 
    private:
-        ros::NodeHandle nh_;
-        ros::ServiceServer attach_service_;
-        ros::ServiceServer detach_service_;
+        gazebo_ros::Node::SharedPtr node;
+        rclcpp::Service<gazebo_ros_link_attacher::srv::Attach>::SharedPtr attach_service_;
+        rclcpp::Service<gazebo_ros_link_attacher::srv::Attach>::SharedPtr detach_service_;
 
-        bool attach_callback(gazebo_ros_link_attacher::Attach::Request &req,
-                              gazebo_ros_link_attacher::Attach::Response &res);
-        bool detach_callback(gazebo_ros_link_attacher::Attach::Request &req,
-                             gazebo_ros_link_attacher::Attach::Response &res);
+        bool attach_callback(const std::shared_ptr<gazebo_ros_link_attacher::srv::Attach::Request> req,
+                              std::shared_ptr<gazebo_ros_link_attacher::srv::Attach::Response> res);
+        bool detach_callback(const std::shared_ptr<gazebo_ros_link_attacher::srv::Attach::Request> req,
+                             std::shared_ptr<gazebo_ros_link_attacher::srv::Attach::Response> res);
 
         std::vector<fixedJoint> joints;
 

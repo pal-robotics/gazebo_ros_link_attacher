@@ -1,48 +1,37 @@
-cmake_minimum_required(VERSION 2.8.3)
+cmake_minimum_required(VERSION 3.5)
 project(gazebo_ros_link_attacher)
 
-#####################################
-## Check c++11 / c++0x support ######
-#####################################
-include(CheckCXXCompilerFlag)
-CHECK_CXX_COMPILER_FLAG("-std=c++11" COMPILER_SUPPORTS_CXX11)
-CHECK_CXX_COMPILER_FLAG("-std=c++0x" COMPILER_SUPPORTS_CXX0X)
-if(COMPILER_SUPPORTS_CXX11)
-  set(CMAKE_CXX_FLAGS "-std=c++11")
-elseif(COMPILER_SUPPORTS_CXX0X)
-  set(CMAKE_CXX_FLAGS "-std=c++0x")
-else()
-  message(FATAL_ERROR "Compiler ${CMAKE_CXX_COMPILER} has no C++11 support.")
+##########################
+## Set compiler options ##
+##########################
+add_compile_options(-std=c++17)
+
+if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
-#####################################
 
-# Load catkin and all dependencies required for this package
-find_package(catkin REQUIRED COMPONENTS 
-  roscpp 
-  gazebo_ros
-  std_msgs
-  message_generation
-)
+set(CMAKE_CXX_FLAGS "-std=c++17 ${CMAKE_CXX_FLAGS}") 
 
-# Depend on system install of Gazebo
+########################
+
+# Load dependencies required for this package
+find_package(ament_cmake REQUIRED)
+find_package(rclcpp REQUIRED) 
+find_package(gazebo_ros REQUIRED) 
+find_package(std_msgs REQUIRED) 
 find_package(gazebo REQUIRED)
-
-add_service_files(
-  FILES
-  Attach.srv
-)
+find_package(rosidl_default_generators REQUIRED)
+find_package(rmw_implementation_cmake REQUIRED)
 
 
 ## Generate added messages and services with any dependencies listed here
-generate_messages(
-  DEPENDENCIES
-  std_msgs
+rosidl_generate_interfaces(${PROJECT_NAME}
+  srv/Attach.srv
+  DEPENDENCIES builtin_interfaces std_msgs
 )
 
-###################################
-## catkin specific configuration ##
-###################################
-catkin_package(CATKIN_DEPENDS message_runtime)
+ament_export_dependencies(rosidl_default_runtime)
+
 
 ###########
 ## Build ##
@@ -50,37 +39,68 @@ catkin_package(CATKIN_DEPENDS message_runtime)
 
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
-include_directories(include)
-link_directories(${GAZEBO_LIBRARY_DIRS})
-include_directories(${Boost_INCLUDE_DIR} ${catkin_INCLUDE_DIRS} ${GAZEBO_INCLUDE_DIRS})
+include_directories(include
+  ${GAZEBO_INCLUDE_DIRS}
+  ${std_msgs_INCLUDE_DIRS}
+  ${CMAKE_CURRENT_BINARY_DIR}/srv
+)
 
 ## Declare a cpp library
-add_library(${PROJECT_NAME} src/gazebo_ros_link_attacher.cpp)
+add_library(${PROJECT_NAME}_plugin src/gazebo_ros_link_attacher.cpp)
 
 
 ## Specify libraries to link a library or executable target against
-target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES} ${GAZEBO_LIBRARIES})
-add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS})
+target_link_libraries(${PROJECT_NAME}_plugin ${ament_cmake_LIBRARIES} ${GAZEBO_LIBRARIES})
 
+
+# Connect targets with locally defined messages
+get_available_rmw_implementations(rmw_implementations2)
+foreach(rmw_implementation ${rmw_implementations2})
+  find_package("${rmw_implementation}" REQUIRED)
+  get_rmw_typesupport(typesupport_impls "${rmw_implementation}" LANGUAGE "cpp")
+  foreach(typesupport_impl ${typesupport_impls})
+    rosidl_target_interfaces(${PROJECT_NAME}_plugin ${PROJECT_NAME} ${typesupport_impl})
+  endforeach()
+endforeach()
 
 #############
 ## Install ##
 #############
 
+install(TARGETS ${PROJECT_NAME}_plugin
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION bin
+)
+
 install(PROGRAMS
   scripts/demo.py
-  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+  DESTINATION lib/${PROJECT_NAME}
 )
 
-## Mark executables and/or libraries for installation
-install(TARGETS ${PROJECT_NAME}
-#   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-#   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+install(PROGRAMS
+  scripts/demo_multiple.py
+  DESTINATION lib/${PROJECT_NAME}
 )
 
+install(PROGRAMS
+  scripts/spawn_models.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(PROGRAMS
+  scripts/attach.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(PROGRAMS
+  scripts/detach.py
+  DESTINATION lib/${PROJECT_NAME}
+)
 
 foreach (dir launch worlds)
   install(DIRECTORY ${dir}/
-  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/${dir})
+  DESTINATION share/${PROJECT_NAME}/${dir})
 endforeach(dir)
+
+ament_package()
