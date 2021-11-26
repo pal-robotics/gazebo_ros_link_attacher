@@ -1,9 +1,10 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
-import rospy
-from gazebo_msgs.srv import SpawnModel, SpawnModelRequest, SpawnModelResponse
+import sys
+import rclpy
+from gazebo_msgs.srv import SpawnEntity
 from copy import deepcopy
-from tf.transformations import quaternion_from_euler
+from transforms3d.euler import euler2quat
 
 sdf_cube = """<?xml version="1.0" ?>
 <sdf version="1.4">
@@ -74,7 +75,7 @@ sdf_cube = """<?xml version="1.0" ?>
 
 
 def create_cube_request(modelname, px, py, pz, rr, rp, ry, sx, sy, sz):
-    """Create a SpawnModelRequest with the parameters of the cube given.
+    """Create a SpawnEntityRequest with the parameters of the cube given.
     modelname: name of the model for gazebo
     px py pz: position of the cube (and it's collision cube)
     rr rp ry: rotation (roll, pitch, yaw) of the model
@@ -87,14 +88,14 @@ def create_cube_request(modelname, px, py, pz, rr, rp, ry, sx, sy, sz):
     # Replace modelname
     cube = cube.replace('MODELNAME', str(modelname))
 
-    req = SpawnModelRequest()
-    req.model_name = modelname
-    req.model_xml = cube
+    req = SpawnEntity.Request()
+    req.name = modelname
+    req.xml = cube
     req.initial_pose.position.x = px
     req.initial_pose.position.y = py
     req.initial_pose.position.z = pz
 
-    q = quaternion_from_euler(rr, rp, ry)
+    q = euler2quat(rr, rp, ry)
     req.initial_pose.orientation.x = q[0]
     req.initial_pose.orientation.y = q[1]
     req.initial_pose.orientation.z = q[2]
@@ -104,35 +105,47 @@ def create_cube_request(modelname, px, py, pz, rr, rp, ry, sx, sy, sz):
 
 
 if __name__ == '__main__':
-    rospy.init_node('spawn_models')
-    spawn_srv = rospy.ServiceProxy('/gazebo/spawn_sdf_model', SpawnModel)
-    rospy.loginfo("Waiting for /gazebo/spawn_sdf_model service...")
-    spawn_srv.wait_for_service()
-    rospy.loginfo("Connected to service!")
+    rclpy.init(args=sys.argv)
+    node = rclpy.create_node('spawn_entities')
+
+    service_name = 'spawn_entity'
+    spawn_srv = node.create_client(SpawnEntity, '/spawn_entity')
+
+    # while not spawn_srv.service_is_ready():
+    while not spawn_srv.wait_for_service(timeout_sec=1.0):
+      node.get_logger().info(f'Waiting for service {spawn_srv.srv_name}...')
+
+    node.get_logger().info("Connected to service!")
 
     # Spawn object 1
-    rospy.loginfo("Spawning cube1")
+    node.get_logger().info("Spawning cube1")
     req1 = create_cube_request("cube1",
                               0.0, 0.0, 0.51,  # position
                               0.0, 0.0, 0.0,  # rotation
                               1.0, 1.0, 1.0)  # size
-    spawn_srv.call(req1)
-    rospy.sleep(1.0)
+
+    resp = spawn_srv.call_async(req1)
+    rclpy.spin_until_future_complete(node, resp)
 
     # Spawn object 2
-    rospy.loginfo("Spawning cube2")
+    node.get_logger().info("Spawning cube2")
     req2 = create_cube_request("cube2",
                               0.0, 1.1, 0.41,  # position
                               0.0, 0.0, 0.0,  # rotation
                               0.8, 0.8, 0.8)  # size
-    spawn_srv.call(req2)
-    rospy.sleep(1.0)
+
+    resp = spawn_srv.call_async(req2)
+    rclpy.spin_until_future_complete(node, resp)
 
     # Spawn object 3
-    rospy.loginfo("Spawning cube3")
+    node.get_logger().info("Spawning cube3")
     req3 = create_cube_request("cube3",
                               0.0, 2.1, 0.41,  # position
                               0.0, 0.0, 0.0,  # rotation
                               0.4, 0.4, 0.4)  # size
-    spawn_srv.call(req3)
-    rospy.sleep(1.0)
+
+    resp = spawn_srv.call_async(req3)
+    rclpy.spin_until_future_complete(node, resp)
+
+    node.destroy_node()
+    rclpy.shutdown()

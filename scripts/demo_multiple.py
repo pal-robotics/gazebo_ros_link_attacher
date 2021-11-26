@@ -1,10 +1,11 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
-import rospy
-from gazebo_ros_link_attacher.msg import Attach
-from gazebo_msgs.srv import SpawnModel, SpawnModelRequest, SpawnModelResponse
+import sys
+import rclpy
+from gazebo_msgs.srv import SpawnEntity
+from gazebo_ros_link_attacher.srv import Attach
 from copy import deepcopy
-from tf.transformations import quaternion_from_euler
+from transforms3d.euler import euler2quat
 
 sdf_cube = """<?xml version="1.0" ?>
 <sdf version="1.4">
@@ -88,14 +89,14 @@ def create_cube_request(modelname, px, py, pz, rr, rp, ry, sx, sy, sz):
     # Replace modelname
     cube = cube.replace('MODELNAME', str(modelname))
 
-    req = SpawnModelRequest()
-    req.model_name = modelname
-    req.model_xml = cube
+    req = SpawnEntity.Request()
+    req.name = modelname
+    req.xml = cube
     req.initial_pose.position.x = px
     req.initial_pose.position.y = py
     req.initial_pose.position.z = pz
 
-    q = quaternion_from_euler(rr, rp, ry)
+    q = euler2quat(rr, rp, ry)
     req.initial_pose.orientation.x = q[0]
     req.initial_pose.orientation.y = q[1]
     req.initial_pose.orientation.z = q[2]
@@ -105,79 +106,86 @@ def create_cube_request(modelname, px, py, pz, rr, rp, ry, sx, sy, sz):
 
 
 if __name__ == '__main__':
-    rospy.init_node('demo_attach_links')
-    attach_pub = rospy.Publisher('/link_attacher_node/attach_models',
-                                 Attach, queue_size=1)
-    rospy.loginfo("Created publisher to /link_attacher_node/attach_models")
-    spawn_srv = rospy.ServiceProxy('/gazebo/spawn_sdf_model', SpawnModel)
-    rospy.loginfo("Waiting for /gazebo/spawn_sdf_model service...")
-    spawn_srv.wait_for_service()
-    rospy.loginfo("Connected to service!")
+    rclpy.init(args=sys.argv)
+    node = rclpy.create_node('demo_attach_links')
+
+    attach_srv = node.create_client(Attach, '/attach')
+    while not attach_srv.wait_for_service(timeout_sec=1.0):
+      node.get_logger().info(f'Waiting for service {attach_srv.srv_name}...')
+
+    service_name = 'spawn_entity'
+    spawn_srv = node.create_client(SpawnEntity, '/spawn_entity')
+    while not spawn_srv.wait_for_service(timeout_sec=1.0):
+      node.get_logger().info(f'Waiting for service {spawn_srv.srv_name}...')
+
+    node.get_logger().info("Connected to service!")
 
     # Spawn object 1
-    rospy.loginfo("Spawning cube1")
+    node.get_logger().info("Spawning cube1")
     req1 = create_cube_request("cube1",
                               0.0, 0.0, 0.51,  # position
                               0.0, 0.0, 0.0,  # rotation
                               1.0, 1.0, 1.0)  # size
-    spawn_srv.call(req1)
-    rospy.sleep(1.0)
+    resp = spawn_srv.call_async(req1)
+    rclpy.spin_until_future_complete(node, resp)
 
     # Spawn object 2
-    rospy.loginfo("Spawning cube2")
+    node.get_logger().info("Spawning cube2")
     req2 = create_cube_request("cube2",
                               0.0, 1.1, 0.41,  # position
                               0.0, 0.0, 0.0,  # rotation
                               0.8, 0.8, 0.8)  # size
-    spawn_srv.call(req2)
-    rospy.sleep(1.0)
+    resp = spawn_srv.call_async(req2)
+    rclpy.spin_until_future_complete(node, resp)
 
     # Spawn object 3
-    rospy.loginfo("Spawning cube3")
+    node.get_logger().info("Spawning cube3")
     req3 = create_cube_request("cube3",
                               0.0, 2.1, 0.41,  # position
                               0.0, 0.0, 0.0,  # rotation
                               0.4, 0.4, 0.4)  # size
-    spawn_srv.call(req3)
-    rospy.sleep(1.0)
+
+    resp = spawn_srv.call_async(req3)
+    rclpy.spin_until_future_complete(node, resp)
 
     # Link them
-    rospy.loginfo("Attaching cube1 and cube2")
-    amsg = Attach()
+    node.get_logger().info("Attaching cube1 and cube2")
+
+    amsg = Attach.Request()
     amsg.model_name_1 = "cube1"
     amsg.link_name_1 = "link"
     amsg.model_name_2 = "cube2"
     amsg.link_name_2 = "link"
 
-    attach_pub.publish(amsg)
-    rospy.sleep(1.0)
+    resp = attach_srv.call_async(amsg)
+    rclpy.spin_until_future_complete(node, resp)
     # From the shell:
     """
-rostopic pub /link_attacher_node/attach_models gazebo_ros_link_attacher/Attach "model_name_1: 'cube1'
-link_name_1: 'link'
-model_name_2: 'cube2'
-link_name_2: 'link'"
+ros2 service call /attach 'gazebo_ros_link_attacher/srv/Attach' '{model_name_1: 'cube1',
+link_name_1: 'link',
+model_name_2: 'cube2',
+link_name_2: 'link'}'
     """
-    rospy.loginfo("Published into linking service!")
+    node.get_logger().info("Published into linking service!")
 
 
-    rospy.loginfo("Attaching cube2 and cube3")
-    amsg = Attach()
+    node.get_logger().info("Attaching cube2 and cube3")
+    amsg = Attach.Request()
     amsg.model_name_1 = "cube2"
     amsg.link_name_1 = "link"
     amsg.model_name_2 = "cube3"
     amsg.link_name_2 = "link"
 
-    attach_pub.publish(amsg)
-    rospy.sleep(1.0)
+    resp = attach_srv.call_async(amsg)
+    rclpy.spin_until_future_complete(node, resp)
 
 
-    rospy.loginfo("Attaching cube3 and cube1")
-    amsg = Attach()
+    node.get_logger().info("Attaching cube3 and cube1")
+    amsg = Attach.Request()
     amsg.model_name_1 = "cube3"
     amsg.link_name_1 = "link"
     amsg.model_name_2 = "cube1"
     amsg.link_name_2 = "link"
 
-    attach_pub.publish(amsg)
-    rospy.sleep(2.0)
+    resp = attach_srv.call_async(amsg)
+    rclpy.spin_until_future_complete(node, resp)

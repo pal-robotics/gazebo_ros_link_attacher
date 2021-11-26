@@ -1,9 +1,5 @@
 #include <gazebo/common/Plugin.hh>
-#include <ros/ros.h>
 #include "gazebo_ros_link_attacher.h"
-#include "gazebo_ros_link_attacher/Attach.h"
-#include "gazebo_ros_link_attacher/AttachRequest.h"
-#include "gazebo_ros_link_attacher/AttachResponse.h"
 #include <ignition/math/Pose3.hh>
 
 namespace gazebo
@@ -12,8 +8,7 @@ namespace gazebo
   GZ_REGISTER_WORLD_PLUGIN(GazeboRosLinkAttacher)
 
   // Constructor
-  GazeboRosLinkAttacher::GazeboRosLinkAttacher() :
-    nh_("link_attacher_node")
+  GazeboRosLinkAttacher::GazeboRosLinkAttacher()
   {
   }
 
@@ -23,23 +18,27 @@ namespace gazebo
   {
   }
 
-  void GazeboRosLinkAttacher::Load(physics::WorldPtr _world, sdf::ElementPtr /*_sdf*/)
+  void GazeboRosLinkAttacher::Load(physics::WorldPtr _world, sdf::ElementPtr _sdf)
   {
+    this->node = gazebo_ros::Node::Get(_sdf);
+
     // Make sure the ROS node for Gazebo has already been initialized                                                                                    
-    if (!ros::isInitialized())
+    if (!rclcpp::ok())
     {
-      ROS_FATAL_STREAM("A ROS node for Gazebo has not been initialized, unable to load plugin. "
+      RCLCPP_FATAL_STREAM(node->get_logger(), "A ROS node for Gazebo has not been initialized, unable to load plugin. "
         << "Load the Gazebo system plugin 'libgazebo_ros_api_plugin.so' in the gazebo_ros package)");
       return;
     }
     
     this->world = _world;
     this->physics = this->world->Physics();
-    this->attach_service_ = this->nh_.advertiseService("attach", &GazeboRosLinkAttacher::attach_callback, this);
-    ROS_INFO_STREAM("Attach service at: " << this->nh_.resolveName("attach"));
-    this->detach_service_ = this->nh_.advertiseService("detach", &GazeboRosLinkAttacher::detach_callback, this);
-    ROS_INFO_STREAM("Detach service at: " << this->nh_.resolveName("detach"));
-    ROS_INFO("Link attacher node initialized.");
+    this->attach_service_ = this->node->create_service<gazebo_ros_link_attacher::srv::Attach>("attach", 
+        std::bind(&GazeboRosLinkAttacher::attach_callback, this, std::placeholders::_1, std::placeholders::_2));
+    RCLCPP_INFO_STREAM(node->get_logger(), "Attach service created");
+    this->detach_service_ = this->node->create_service<gazebo_ros_link_attacher::srv::Attach>("detach", 
+        std::bind(&GazeboRosLinkAttacher::detach_callback, this, std::placeholders::_1, std::placeholders::_2));
+    RCLCPP_INFO_STREAM(node->get_logger(), "Detach service created");
+    RCLCPP_INFO(node->get_logger(), "Link attacher node initialized.");
   }
 
   bool GazeboRosLinkAttacher::attach(std::string model1, std::string link1,
@@ -52,73 +51,73 @@ namespace gazebo
     // gazebo hangs/crashes
     fixedJoint j;
     if(this->getJoint(model1, link1, model2, link2, j)){
-        ROS_INFO_STREAM("Joint already existed, reusing it.");
+        RCLCPP_INFO_STREAM(node->get_logger(), "Joint already existed, reusing it.");
         j.joint->Attach(j.l1, j.l2);
         return true;
     }
     else{
-        ROS_INFO_STREAM("Creating new joint.");
+        RCLCPP_INFO_STREAM(node->get_logger(), "Creating new joint.");
     }
     j.model1 = model1;
     j.link1 = link1;
     j.model2 = model2;
     j.link2 = link2;
-    ROS_DEBUG_STREAM("Getting BasePtr of " << model1);
+    RCLCPP_DEBUG_STREAM(node->get_logger(), "Getting BasePtr of " << model1);
     physics::BasePtr b1 = this->world->ModelByName(model1);
 
     if (b1 == NULL){
-      ROS_ERROR_STREAM(model1 << " model was not found");
+      RCLCPP_ERROR_STREAM(node->get_logger(), model1 << " model was not found");
       return false;
     }
-    ROS_DEBUG_STREAM("Getting BasePtr of " << model2);
+    RCLCPP_DEBUG_STREAM(node->get_logger(), "Getting BasePtr of " << model2);
     physics::BasePtr b2 = this->world->ModelByName(model2);
     if (b2 == NULL){
-      ROS_ERROR_STREAM(model2 << " model was not found");
+      RCLCPP_ERROR_STREAM(node->get_logger(), model2 << " model was not found");
       return false;
     }
 
-    ROS_DEBUG_STREAM("Casting into ModelPtr");
+    RCLCPP_DEBUG_STREAM(node->get_logger(), "Casting into ModelPtr");
     physics::ModelPtr m1(dynamic_cast<physics::Model*>(b1.get()));
     j.m1 = m1;
     physics::ModelPtr m2(dynamic_cast<physics::Model*>(b2.get()));
     j.m2 = m2;
 
-    ROS_DEBUG_STREAM("Getting link: '" << link1 << "' from model: '" << model1 << "'");
+    RCLCPP_DEBUG_STREAM(node->get_logger(), "Getting link: '" << link1 << "' from model: '" << model1 << "'");
     physics::LinkPtr l1 = m1->GetLink(link1);
     if (l1 == NULL){
-      ROS_ERROR_STREAM(link1 << " link was not found");
+      RCLCPP_ERROR_STREAM(node->get_logger(), link1 << " link was not found");
       return false;
     }
     if (l1->GetInertial() == NULL){
-        ROS_ERROR_STREAM("link1 inertia is NULL!");
+        RCLCPP_ERROR_STREAM(node->get_logger(), "link1 inertia is NULL!");
     }
     else
-        ROS_DEBUG_STREAM("link1 inertia is not NULL, for example, mass is: " << l1->GetInertial()->Mass());
+        RCLCPP_DEBUG_STREAM(node->get_logger(), "link1 inertia is not NULL, for example, mass is: " << l1->GetInertial()->Mass());
     j.l1 = l1;
-    ROS_DEBUG_STREAM("Getting link: '" << link2 << "' from model: '" << model2 << "'");
+    RCLCPP_DEBUG_STREAM(node->get_logger(), "Getting link: '" << link2 << "' from model: '" << model2 << "'");
     physics::LinkPtr l2 = m2->GetLink(link2);
     if (l2 == NULL){
-      ROS_ERROR_STREAM(link2 << " link was not found");
+      RCLCPP_ERROR_STREAM(node->get_logger(), link2 << " link was not found");
       return false;
     }
     if (l2->GetInertial() == NULL){
-        ROS_ERROR_STREAM("link2 inertia is NULL!");
+        RCLCPP_ERROR_STREAM(node->get_logger(), "link2 inertia is NULL!");
     }
     else
-        ROS_DEBUG_STREAM("link2 inertia is not NULL, for example, mass is: " << l2->GetInertial()->Mass());
+        RCLCPP_DEBUG_STREAM(node->get_logger(), "link2 inertia is not NULL, for example, mass is: " << l2->GetInertial()->Mass());
     j.l2 = l2;
 
-    ROS_DEBUG_STREAM("Links are: "  << l1->GetName() << " and " << l2->GetName());
+    RCLCPP_DEBUG_STREAM(node->get_logger(), "Links are: "  << l1->GetName() << " and " << l2->GetName());
 
-    ROS_DEBUG_STREAM("Creating revolute joint on model: '" << model1 << "'");
+    RCLCPP_DEBUG_STREAM(node->get_logger(), "Creating revolute joint on model: '" << model1 << "'");
     j.joint = this->physics->CreateJoint("revolute", m1);
     this->joints.push_back(j);
 
-    ROS_DEBUG_STREAM("Attach");
+    RCLCPP_DEBUG_STREAM(node->get_logger(), "Attach");
     j.joint->Attach(l1, l2);
-    ROS_DEBUG_STREAM("Loading links");
+    RCLCPP_DEBUG_STREAM(node->get_logger(), "Loading links");
     j.joint->Load(l1, l2, ignition::math::Pose3d());
-    ROS_DEBUG_STREAM("SetModel");
+    RCLCPP_DEBUG_STREAM(node->get_logger(), "SetModel");
     j.joint->SetModel(m2);
     /*
      * If SetModel is not done we get:
@@ -134,13 +133,13 @@ namespace gazebo
      /tmp/buildd/gazebo2-2.2.3/gazebo/physics/ode/ODELink.cc(183): Inertial pointer is NULL
      */
 
-    ROS_DEBUG_STREAM("SetHightstop");
+    RCLCPP_DEBUG_STREAM(node->get_logger(), "SetHightstop");
     j.joint->SetUpperLimit(0, 0);
-    ROS_DEBUG_STREAM("SetLowStop");
+    RCLCPP_DEBUG_STREAM(node->get_logger(), "SetLowStop");
     j.joint->SetLowerLimit(0, 0);
-    ROS_DEBUG_STREAM("Init");
+    RCLCPP_DEBUG_STREAM(node->get_logger(), "Init");
     j.joint->Init();
-    ROS_INFO_STREAM("Attach finished.");
+    RCLCPP_INFO_STREAM(node->get_logger(), "Attach finished.");
 
     return true;
   }
@@ -174,38 +173,38 @@ namespace gazebo
 
   }
 
-  bool GazeboRosLinkAttacher::attach_callback(gazebo_ros_link_attacher::Attach::Request &req,
-                                              gazebo_ros_link_attacher::Attach::Response &res)
+  bool GazeboRosLinkAttacher::attach_callback(const std::shared_ptr<gazebo_ros_link_attacher::srv::Attach::Request> req,
+                                              std::shared_ptr<gazebo_ros_link_attacher::srv::Attach::Response> res)
   {
-    ROS_INFO_STREAM("Received request to attach model: '" << req.model_name_1
-                    << "' using link: '" << req.link_name_1 << "' with model: '"
-                    << req.model_name_2 << "' using link: '" <<  req.link_name_2 << "'");
-    if (! this->attach(req.model_name_1, req.link_name_1,
-                       req.model_name_2, req.link_name_2)){
-      ROS_ERROR_STREAM("Could not make the attach.");
-      res.ok = false;
+    RCLCPP_INFO_STREAM(node->get_logger(), "Received request to attach model: '" << req->model_name_1
+                    << "' using link: '" << req->link_name_1 << "' with model: '"
+                    << req->model_name_2 << "' using link: '" <<  req->link_name_2 << "'");
+    if (! this->attach(req->model_name_1, req->link_name_1,
+                       req->model_name_2, req->link_name_2)){
+      RCLCPP_ERROR_STREAM(node->get_logger(), "Could not make the attach.");
+      res->ok = false;
     }
     else{
-      ROS_INFO_STREAM("Attach was succesful");
-      res.ok = true;
+      RCLCPP_INFO_STREAM(node->get_logger(), "Attach was succesful");
+      res->ok = true;
     }
     return true;
 
   }
 
-  bool GazeboRosLinkAttacher::detach_callback(gazebo_ros_link_attacher::Attach::Request &req,
-                                              gazebo_ros_link_attacher::Attach::Response &res){
-      ROS_INFO_STREAM("Received request to detach model: '" << req.model_name_1
-                      << "' using link: '" << req.link_name_1 << "' with model: '"
-                      << req.model_name_2 << "' using link: '" <<  req.link_name_2 << "'");
-      if (! this->detach(req.model_name_1, req.link_name_1,
-                         req.model_name_2, req.link_name_2)){
-        ROS_ERROR_STREAM("Could not make the detach.");
-        res.ok = false;
+  bool GazeboRosLinkAttacher::detach_callback(const std::shared_ptr<gazebo_ros_link_attacher::srv::Attach::Request> req,
+                                              std::shared_ptr<gazebo_ros_link_attacher::srv::Attach::Response> res){
+      RCLCPP_INFO_STREAM(node->get_logger(), "Received request to detach model: '" << req->model_name_1
+                      << "' using link: '" << req->link_name_1 << "' with model: '"
+                      << req->model_name_2 << "' using link: '" <<  req->link_name_2 << "'");
+      if (! this->detach(req->model_name_1, req->link_name_1,
+                         req->model_name_2, req->link_name_2)){
+        RCLCPP_ERROR_STREAM(node->get_logger(), "Could not make the detach.");
+        res->ok = false;
       }
       else{
-        ROS_INFO_STREAM("Detach was succesful");
-        res.ok = true;
+        RCLCPP_INFO_STREAM(node->get_logger(), "Detach was succesful");
+        res->ok = true;
       }
       return true;
   }
