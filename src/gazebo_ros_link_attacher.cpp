@@ -1,3 +1,4 @@
+#include <boost/thread/recursive_mutex.hpp>
 #include <gazebo/common/Plugin.hh>
 #include <ros/ros.h>
 #include "gazebo_ros_link_attacher.h"
@@ -35,6 +36,8 @@ namespace gazebo
     
     this->world = _world;
     this->physics = this->world->Physics();
+    this->physics_mutex = this->physics->GetPhysicsUpdateMutex();
+
     this->attach_service_ = this->nh_.advertiseService("attach", &GazeboRosLinkAttacher::attach_callback, this);
     ROS_INFO_STREAM("Attach service at: " << this->nh_.resolveName("attach"));
     this->detach_service_ = this->nh_.advertiseService("detach", &GazeboRosLinkAttacher::detach_callback, this);
@@ -151,6 +154,7 @@ namespace gazebo
       // search for the instance of joint and do detach
       fixedJoint j;
       if(this->getJoint(model1, link1, model2, link2, j)){
+          boost::recursive_mutex::scoped_lock lock(*this->physics_mutex);
           j.joint->Detach();
           return true;
       }

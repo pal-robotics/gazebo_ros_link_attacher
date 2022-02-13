@@ -7,6 +7,8 @@
 #ifndef GAZEBO_ROS_LINK_ATTACHER_HH
 #define GAZEBO_ROS_LINK_ATTACHER_HH
 
+#include <boost/thread/recursive_mutex.hpp>
+
 #include <ros/ros.h>
 
 #include <sdf/sdf.hh>
@@ -72,6 +74,8 @@ namespace gazebo
                              gazebo_ros_link_attacher::Attach::Response &res);
 
         std::vector<fixedJoint> joints;
+
+        boost::recursive_mutex* physics_mutex;
 
         /// \brief The physics engine.
         physics::PhysicsEnginePtr physics;
