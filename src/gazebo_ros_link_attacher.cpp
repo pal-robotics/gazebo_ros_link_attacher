@@ -57,6 +57,7 @@ namespace gazebo
     if(this->getJoint(model1, link1, model2, link2, j)){
         ROS_INFO_STREAM("Joint already existed, reusing it.");
         j.joint->Attach(j.l1, j.l2);
+        j.joint->Load(j.l1, j.l2, ignition::math::Pose3d());
         return true;
     }
     else{
