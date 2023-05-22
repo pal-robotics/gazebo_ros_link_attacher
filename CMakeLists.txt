@@ -46,7 +46,7 @@ include_directories(include
 )
 
 ## Declare a cpp library
-add_library(${PROJECT_NAME}_plugin src/gazebo_ros_link_attacher.cpp)
+add_library(${PROJECT_NAME}_plugin SHARED src/gazebo_ros_link_attacher.cpp)
 
 
 ## Specify libraries to link a library or executable target against
