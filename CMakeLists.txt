@@ -40,7 +40,8 @@ ament_export_dependencies(rosidl_default_runtime)
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 include_directories(include
-  ${GAZEBO_INCLUDE_DIRS}
+  ${gazebo_ros_INCLUDE_DIRS}
+  ${rclcpp_INCLUDE_DIRS}
   ${std_msgs_INCLUDE_DIRS}
   ${CMAKE_CURRENT_BINARY_DIR}/srv
 )
@@ -49,19 +50,24 @@ include_directories(include
 add_library(${PROJECT_NAME}_plugin SHARED src/gazebo_ros_link_attacher.cpp)
 
 
-## Specify libraries to link a library or executable target against
-target_link_libraries(${PROJECT_NAME}_plugin ${ament_cmake_LIBRARIES} ${GAZEBO_LIBRARIES})
-
-
 # Connect targets with locally defined messages
 get_available_rmw_implementations(rmw_implementations2)
 foreach(rmw_implementation ${rmw_implementations2})
   find_package("${rmw_implementation}" REQUIRED)
   get_rmw_typesupport(typesupport_impls "${rmw_implementation}" LANGUAGE "cpp")
   foreach(typesupport_impl ${typesupport_impls})
-    rosidl_target_interfaces(${PROJECT_NAME}_plugin ${PROJECT_NAME} ${typesupport_impl})
+    rosidl_get_typesupport_target(cpp_typesupport_target "${PROJECT_NAME}" "rosidl_typesupport_cpp")
   endforeach()
 endforeach()
+
+## Specify libraries to link a library or executable target against
+target_link_libraries(${PROJECT_NAME}_plugin 
+  ${ament_cmake_LIBRARIES} 
+  ${gazebo_ros_LIBRARIES} 
+  ${rclcpp_LIBRARIES}
+  ${std_msgs_LIBRARIES}
+  "${cpp_typesupport_target}")
+
 
 #############
 ## Install ##

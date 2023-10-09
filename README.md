@@ -10,7 +10,7 @@ git clone https://github.com/pal-robotics/gazebo_ros_link_attacher.git
 cd ..
 
 rosdep update
-rosdep install --from-paths src --ignore-src -y --rosdistro foxy
+rosdep install --from-paths src --ignore-src -y --rosdistro humble
 
 colcon build
 source install/setup.bash
